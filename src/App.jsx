@@ -1,6 +1,9 @@
 import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
+import { SavedTravelersProvider } from './context/SavedTravelersContext';
+import { BoardingPassesProvider } from './context/BoardingPassesContext';
+import { CreditCardsProvider } from './context/CreditCardsContext';
 import Layout from './components/Layout';
 import Home from './pages/Home';
 import Login from './pages/Login';
@@ -8,6 +11,12 @@ import Register from './pages/Register';
 import SearchResults from './pages/SearchResults';
 import FlightDetail from './pages/FlightDetail';
 import Booking from './pages/Booking';
+import PassengerInfo from './pages/PassengerInfo';
+import SeatSelection from './pages/SeatSelection';
+import AddOns from './pages/AddOns';
+import SavedTravelers from './pages/SavedTravelers';
+import BoardingPasses from './pages/BoardingPasses';
+import MyTrips from './pages/MyTrips';
 import Confirmation from './pages/Confirmation';
 import Member from './pages/Member';
 import Orders from './pages/Orders';
@@ -25,7 +34,12 @@ const ScrollToTop = () => {
   const { pathname } = useLocation();
 
   useEffect(() => {
-    window.scrollTo(0, 0);
+    // Reset any lingering body-scroll lock from modal/date-picker components
+    if (typeof document !== 'undefined') {
+      document.body.style.overflow = '';
+    }
+    // Use 'instant' to override any in-flight smooth scrolls
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
   }, [pathname]);
 
   return null;
@@ -34,31 +48,43 @@ const ScrollToTop = () => {
 function App() {
   return (
     <AuthProvider>
-      <BrowserRouter>
-        <ScrollToTop />
-        <Layout>
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
-            <Route path="/search" element={<SearchResults />} />
-            <Route path="/flight/:id" element={<FlightDetail />} />
-            <Route path="/booking" element={<Booking />} />
-            <Route path="/confirmation" element={<Confirmation />} />
-            <Route path="/member" element={<Member />} />
-            <Route path="/orders" element={<Orders />} />
-            <Route path="/tasks" element={<Tasks />} />
-            <Route path="/checkin" element={<CheckIn />} />
-            <Route path="/support" element={<Support />} />
-            <Route path="/fare-map" element={<LowFareMap />} />
-            <Route path="/schedule" element={<Schedule />} />
-            <Route path="/flight-status" element={<FlightStatus />} />
-            <Route path="/blog/:category" element={<Blog />} />
-            <Route path="/articles" element={<ArticleList />} />
-            <Route path="/articles/:id" element={<ArticleDetail />} />
-          </Routes>
-        </Layout>
-      </BrowserRouter>
+      <SavedTravelersProvider>
+        <CreditCardsProvider>
+        <BoardingPassesProvider>
+        <BrowserRouter basename={import.meta.env.BASE_URL.replace(/\/$/, '')}>
+          <ScrollToTop />
+          <Layout>
+            <Routes>
+              <Route path="/" element={<Home />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/register" element={<Register />} />
+              <Route path="/search" element={<SearchResults />} />
+              <Route path="/flight/:id" element={<FlightDetail />} />
+              <Route path="/seat" element={<SeatSelection />} />
+              <Route path="/passengers" element={<PassengerInfo />} />
+              <Route path="/add-ons" element={<AddOns />} />
+              <Route path="/booking" element={<Booking />} />
+              <Route path="/confirmation" element={<Confirmation />} />
+              <Route path="/member" element={<Member />} />
+              <Route path="/member/travelers" element={<SavedTravelers />} />
+              <Route path="/orders" element={<Orders />} />
+              <Route path="/tasks" element={<Tasks />} />
+              <Route path="/checkin" element={<CheckIn />} />
+              <Route path="/boarding-passes" element={<BoardingPasses />} />
+              <Route path="/my-trips" element={<MyTrips />} />
+              <Route path="/support" element={<Support />} />
+              <Route path="/fare-map" element={<LowFareMap />} />
+              <Route path="/schedule" element={<Schedule />} />
+              <Route path="/flight-status" element={<FlightStatus />} />
+              <Route path="/blog/:category" element={<Blog />} />
+              <Route path="/articles" element={<ArticleList />} />
+              <Route path="/articles/:id" element={<ArticleDetail />} />
+            </Routes>
+          </Layout>
+        </BrowserRouter>
+        </BoardingPassesProvider>
+        </CreditCardsProvider>
+      </SavedTravelersProvider>
     </AuthProvider>
   );
 }

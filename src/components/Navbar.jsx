@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   ArrowRightOnRectangleIcon,
@@ -83,10 +84,19 @@ const LocaleDropdown = ({ icon: Icon, label, value, options, onChange }) => {
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [openDropdown, setOpenDropdown] = useState(null);
+  const [memberOpen, setMemberOpen] = useState(false);
   const [language, setLanguage] = useState('zh-TW');
   const [currency, setCurrency] = useState('TWD');
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+
+  // Lock body scroll while mobile drawer is open
+  useEffect(() => {
+    if (!isOpen) return undefined;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = prev; };
+  }, [isOpen]);
 
   const handleLogout = () => {
     logout();
@@ -148,7 +158,7 @@ const Navbar = () => {
   };
 
   return (
-    <nav className="sticky top-0 z-50 bg-white/95 shadow-lg shadow-gray-300/10 backdrop-blur">
+    <nav className="sticky top-0 z-50 bg-white/65 shadow-lg shadow-gray-300/10 backdrop-blur-md">
       <div className="mx-auto max-w-8xl px-4 sm:px-6 lg:px-8">
         <div className="flex h-14 items-center justify-between md:h-16">
           <Link to="/" className="flex items-center">
@@ -199,14 +209,29 @@ const Navbar = () => {
           <div className="hidden items-center gap-2 md:flex">
             {user ? (
               <>
-                <Link to="/member" className="flex items-center gap-1 text-sm text-gray-600 hover:text-primary">
-                  <UserIcon className="h-4 w-4" />
-                  {user.name}
-                </Link>
-                <button onClick={handleLogout} className="flex items-center gap-1 text-sm text-gray-600 hover:text-primary">
-                  <ArrowRightOnRectangleIcon className="h-4 w-4" />
-                  登出
-                </button>
+                <div className="group relative">
+                  <button className="flex items-center gap-1 rounded-full px-3 py-2 text-sm text-gray-700 transition hover:bg-orange-50 hover:text-primary">
+                    <UserIcon className="h-4 w-4" />
+                    {user.name}
+                    <ChevronDownIcon className="h-3.5 w-3.5 transition group-hover:rotate-180" />
+                  </button>
+                  <div className="invisible absolute right-0 top-full z-50 pt-2 opacity-0 transition duration-200 group-hover:visible group-hover:opacity-100">
+                    <div className="w-56 overflow-hidden rounded-lg border border-gray-100 bg-white py-1 shadow-xl shadow-gray-900/10 ring-1 ring-black/5">
+                      <Link to="/member" className="block px-4 py-2.5 text-sm text-gray-700 transition hover:bg-orange-50 hover:text-primary">會員中心</Link>
+                      <Link to="/member/travelers" className="block px-4 py-2.5 text-sm text-gray-700 transition hover:bg-orange-50 hover:text-primary">常用旅客</Link>
+                      <Link to="/orders" className="block px-4 py-2.5 text-sm text-gray-700 transition hover:bg-orange-50 hover:text-primary">我的訂單</Link>
+                      <Link to="/boarding-passes" className="block px-4 py-2.5 text-sm text-gray-700 transition hover:bg-orange-50 hover:text-primary">我的登機證</Link>
+                      <Link to="/my-trips" className="flex items-center gap-1.5 px-4 py-2.5 text-sm text-gray-700 transition hover:bg-orange-50 hover:text-primary">
+                        我的行程
+                        <span className="rounded-full bg-gradient-to-r from-primary to-violet-600 px-1.5 py-0.5 text-[9px] font-bold text-white">AI</span>
+                      </Link>
+                      <div className="my-1 border-t border-gray-100" />
+                      <button onClick={handleLogout} className="block w-full px-4 py-2.5 text-left text-sm text-gray-700 transition hover:bg-orange-50 hover:text-primary">
+                        登出
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </>
             ) : (
               <>
@@ -231,24 +256,75 @@ const Navbar = () => {
           </button>
         </div>
 
-        {isOpen && (
-          <div className="border-t border-gray-100 py-4 md:hidden">
+      </div>
+
+      {/* Mobile full-screen drawer — portaled to body so navbar's backdrop-blur containing-block doesn't trap it */}
+      {isOpen && typeof document !== 'undefined' && createPortal(
+        <div className="fixed left-0 right-0 top-0 bottom-0 z-[100] flex h-screen w-screen flex-col bg-white md:hidden">
+          {/* Top bar inside drawer with close button */}
+          <div className="flex h-14 w-full shrink-0 items-center justify-between border-b border-gray-100 px-4">
+            <Link to="/" onClick={() => setIsOpen(false)} className="flex items-center">
+              <span className="text-xl font-black text-primary">tigerair</span>
+            </Link>
+            <button
+              onClick={() => setIsOpen(false)}
+              className="rounded-lg p-2 text-gray-600 transition hover:bg-orange-50 hover:text-primary"
+              aria-label="關閉選單"
+            >
+              <XMarkIcon className="h-7 w-7" />
+            </button>
+          </div>
+
+          {/* Scrollable content */}
+          <div className="flex-1 overflow-y-auto px-4 pt-4 pb-10">
+            {/* Member section first when logged in */}
+            {user && (
+              <div className="mb-3 overflow-hidden rounded-xl border border-gray-100 bg-white">
+                <button
+                  onClick={() => setMemberOpen((c) => !c)}
+                  className={`flex w-full items-center justify-between px-5 py-4 text-left text-base font-bold transition ${memberOpen ? 'bg-orange-50 text-primary' : 'text-gray-800 hover:bg-gray-50 hover:text-primary'}`}
+                >
+                  <span className="flex items-center gap-2.5">
+                    <UserIcon className="h-5 w-5" />
+                    會員中心
+                  </span>
+                  <ChevronDownIcon className={`h-5 w-5 transition duration-200 ${memberOpen ? 'rotate-180' : ''}`} />
+                </button>
+                <div className={`grid transition-all duration-200 ease-out ${memberOpen ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
+                  <div className="overflow-hidden">
+                    <div className="space-y-1 border-t border-gray-100 bg-gray-50/70 px-3 py-3">
+                      <Link to="/member" onClick={() => setIsOpen(false)} className="block rounded-md px-3 py-2.5 text-[15px] text-gray-700 transition hover:bg-white hover:text-primary">會員中心</Link>
+                      <Link to="/tasks" onClick={() => setIsOpen(false)} className="block rounded-md px-3 py-2.5 text-[15px] text-gray-700 transition hover:bg-white hover:text-primary">會員任務</Link>
+                      <Link to="/member/travelers" onClick={() => setIsOpen(false)} className="block rounded-md px-3 py-2.5 text-[15px] text-gray-700 transition hover:bg-white hover:text-primary">常用旅客</Link>
+                      <Link to="/orders" onClick={() => setIsOpen(false)} className="block rounded-md px-3 py-2.5 text-[15px] text-gray-700 transition hover:bg-white hover:text-primary">我的訂單</Link>
+                      <Link to="/boarding-passes" onClick={() => setIsOpen(false)} className="block rounded-md px-3 py-2.5 text-[15px] text-gray-700 transition hover:bg-white hover:text-primary">我的登機證</Link>
+                      <Link to="/my-trips" onClick={() => setIsOpen(false)} className="flex items-center gap-1.5 rounded-md px-3 py-2.5 text-[15px] text-gray-700 transition hover:bg-white hover:text-primary">
+                        我的行程
+                        <span className="rounded-full bg-gradient-to-r from-primary to-violet-600 px-1.5 py-0.5 text-[10px] font-bold text-white">AI</span>
+                      </Link>
+                      <button onClick={() => { handleLogout(); }} className="block w-full rounded-md px-3 py-2.5 text-left text-[15px] text-gray-700 transition hover:bg-white hover:text-primary">登出</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className="space-y-2">
               {navLinks.map((link, idx) => (
-                <div key={idx} className="overflow-hidden rounded-lg border border-gray-100 bg-white">
+                <div key={idx} className="overflow-hidden rounded-xl border border-gray-100 bg-white">
                   <button
                     onClick={() => setOpenDropdown(openDropdown === idx ? null : idx)}
-                    className={`flex w-full items-center justify-between px-4 py-3 text-left text-sm font-semibold transition ${openDropdown === idx ? 'bg-orange-50 text-primary' : 'text-gray-700 hover:bg-gray-50 hover:text-primary'}`}
+                    className={`flex w-full items-center justify-between px-5 py-4 text-left text-base font-bold transition ${openDropdown === idx ? 'bg-orange-50 text-primary' : 'text-gray-800 hover:bg-gray-50 hover:text-primary'}`}
                   >
                     {link.category}
-                    <ChevronDownIcon className={`h-4 w-4 transition duration-200 ${openDropdown === idx ? 'rotate-180' : ''}`} />
+                    <ChevronDownIcon className={`h-5 w-5 transition duration-200 ${openDropdown === idx ? 'rotate-180' : ''}`} />
                   </button>
                   <div className={`grid transition-all duration-200 ease-out ${openDropdown === idx ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
                     <div className="overflow-hidden">
                       <div className="space-y-3 border-t border-gray-100 bg-gray-50/70 px-4 py-3">
                         {link.subcategories.map((sub, sidx) => (
                           <div key={sidx}>
-                            <div className="mb-1 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                            <div className="mb-1.5 flex items-center gap-2 text-[11px] font-bold uppercase tracking-wide text-gray-500">
                               <span className="h-1.5 w-1.5 rounded-full bg-primary" />
                               {sub.name}
                             </div>
@@ -257,7 +333,7 @@ const Navbar = () => {
                                 <div key={iidx}>
                                   {renderMenuItem(
                                     item,
-                                    'block rounded-md px-3 py-2 text-sm text-gray-600 transition hover:bg-white hover:text-primary',
+                                    'block rounded-md px-3 py-2.5 text-[15px] text-gray-700 transition hover:bg-white hover:text-primary',
                                     () => setIsOpen(false)
                                   )}
                                 </div>
@@ -271,45 +347,32 @@ const Navbar = () => {
                 </div>
               ))}
             </div>
-            <div className="mt-4 border-t border-gray-100 pt-4">
-              {user ? (
-                <>
-                  <Link
-                    to="/member"
-                    className="block rounded-md px-4 py-2 text-sm text-gray-600 transition hover:bg-orange-50 hover:text-primary"
-                    onClick={() => setIsOpen(false)}
-                  >
-                    會員中心
-                  </Link>
-                  <button onClick={handleLogout} className="block w-full rounded-md px-4 py-2 text-left text-sm text-gray-600 transition hover:bg-orange-50 hover:text-primary">
-                    登出
-                  </button>
-                </>
-              ) : (
-                <>
-                  <Link
-                    to="/login"
-                    className="block rounded-md px-4 py-2 text-sm text-gray-600 transition hover:bg-orange-50 hover:text-primary"
-                    onClick={() => setIsOpen(false)}
-                  >
-                    登入
-                  </Link>
-                  <Link
-                    to="/register"
-                    className="mt-2 block rounded-lg bg-primary px-4 py-2.5 text-center text-sm font-semibold text-white transition hover:bg-primary-dark"
-                    onClick={() => setIsOpen(false)}
-                  >
-                    註冊
-                  </Link>
-                </>
-              )}
-            </div>
-            <div className="mt-4 border-t border-gray-100 pt-4">
+
+            {!user && (
+              <div className="mt-5 grid grid-cols-2 gap-2">
+                <Link
+                  to="/login"
+                  className="block rounded-lg border border-gray-200 px-4 py-3 text-center text-base font-bold text-gray-700 transition hover:border-primary hover:text-primary"
+                  onClick={() => setIsOpen(false)}
+                >
+                  登入
+                </Link>
+                <Link
+                  to="/register"
+                  className="block rounded-lg bg-primary px-4 py-3 text-center text-base font-bold text-white transition hover:bg-primary-dark"
+                  onClick={() => setIsOpen(false)}
+                >
+                  註冊
+                </Link>
+              </div>
+            )}
+            <div className="mt-5 border-t border-gray-100 pt-4">
               {localeControls}
             </div>
           </div>
-        )}
-      </div>
+        </div>,
+        document.body
+      )}
     </nav>
   );
 };
